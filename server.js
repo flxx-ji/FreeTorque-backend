@@ -68,9 +68,9 @@ app.get("/api/ping", (req, res) => {
 
 // 🌐 Routes API
 app.get('/', (req, res) => {
-  res.send('🚀 API RYD est en ligne !');
+  res.send('🚀 API Free Torque est en ligne !');
 });
-app.use('/api/stripe', stripeRoutes);
+ 
 app.use('/api/motos', motoRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/reservations', reservationRoutes);
