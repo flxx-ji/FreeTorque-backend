@@ -1,5 +1,5 @@
 // utils/checkEnv.js
-const requiredEnv = ['PORT', 'JWT_SECRET', 'MONGO_URI', 'STRIPE_SECRET_KEY'];
+const requiredEnv = ['PORT', 'JWT_SECRET', 'MONGO_URI'];
 
 function checkEnvVariables() {
   const missingEnv = requiredEnv.filter(envVar => !process.env[envVar]);
