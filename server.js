@@ -60,6 +60,12 @@ app.use('/api/stripe/webhook', require('./routes/stripeRoutes.js'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ✅ Route de ping pour garder le backend réveillé
+app.get("/api/ping", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+
 // 🌐 Routes API
 app.get('/', (req, res) => {
   res.send('🚀 API RYD est en ligne !');
