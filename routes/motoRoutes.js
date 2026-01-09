@@ -7,9 +7,27 @@ const cloudinaryStorage = require('../config/storage'); // 🔧 Cloudinary confi
 const upload = multer({ storage: cloudinaryStorage }); // ✅ Upload via Cloudinary
 
 // 1️⃣ GET /api/motos → Liste
+// 🔥 Cache mémoire simple (accélère Render Free)
+let motosCache = null;
+let lastFetch = 0;
+const CACHE_TTL = 60 * 1000; // 1 minute
+
+// 1️⃣ GET /api/motos → Liste
 router.get('/', async (req, res) => {
+  const now = Date.now();
+
+  // ✅ Cache valide → réponse immédiate
+  if (motosCache && now - lastFetch < CACHE_TTL) {
+    return res.status(200).json(motosCache);
+  }
+
   try {
-    const motos = await Moto.find();
+    const motos = await Moto.find().lean(); // lean = plus rapide
+
+    // 🧠 Mise en cache
+    motosCache = motos;
+    lastFetch = now;
+
     res.status(200).json(motos);
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la récupération des motos", error });
