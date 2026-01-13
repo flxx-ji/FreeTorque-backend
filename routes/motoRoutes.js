@@ -2,39 +2,43 @@ const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
 const Moto = require('../models/moto.js');
-const multer = require('multer');
-const cloudinaryStorage = require('../config/storage'); // 🔧 Cloudinary config
-const upload = multer({ storage: cloudinaryStorage }); // ✅ Upload via Cloudinary
 
-// 1️⃣ GET /api/motos → Liste
-// 🔥 Cache mémoire simple (accélère Render Free)
-let motosCache = null;
-let lastFetch = 0;
-const CACHE_TTL = 60 * 1000; // 1 minute
+// ✅ mini cache mémoire (1 min)
+const CACHE_TTL_MS = 60_000;
+let cache = {
+  expires: 0,
+  data: null
+};
 
-// 1️⃣ GET /api/motos → Liste
+function invalidateCache() {
+  cache.expires = 0;
+  cache.data = null;
+}
+
+// 1️⃣ GET /api/motos → Liste (PUBLIC) + cache + headers
 router.get('/', async (req, res) => {
-  const now = Date.now();
-
-  // ✅ Cache valide → réponse immédiate
-  if (motosCache && now - lastFetch < CACHE_TTL) {
-    return res.status(200).json(motosCache);
-  }
-
   try {
+    // 🔥 cache mémoire
+    if (cache.data && Date.now() < cache.expires) {
+      res.set('X-Cache', 'HIT');
+      // cache navigateur/CDN
+      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+      return res.status(200).json(cache.data);
+    }
+
     const motos = await Moto.find().lean(); // lean = plus rapide
+    cache.data = motos;
+    cache.expires = Date.now() + CACHE_TTL_MS;
 
-    // 🧠 Mise en cache
-    motosCache = motos;
-    lastFetch = now;
-
-    res.status(200).json(motos);
+    res.set('X-Cache', 'MISS');
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+    return res.status(200).json(motos);
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la récupération des motos", error });
+    return res.status(500).json({ message: "Erreur lors de la récupération des motos", error });
   }
 });
 
-// 2️⃣ GET /api/motos/:id → Détail
+// 2️⃣ GET /api/motos/:id → Détail (PUBLIC)
 router.get('/:id', async (req, res) => {
   const id = String(req.params.id).trim();
 
@@ -43,116 +47,11 @@ router.get('/:id', async (req, res) => {
   }
 
   try {
-    const moto = await Moto.findById(id);
+    const moto = await Moto.findById(id).lean();
     if (!moto) return res.status(404).json({ message: "Moto non trouvée" });
-    res.status(200).json(moto);
+    return res.status(200).json(moto);
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la récupération de la moto", error });
-  }
-});
-
-// 3️⃣ POST /api/motos → Ajouter une moto
-router.post('/', upload.single('image'), async (req, res) => {
-  try {
-    const { nom, marque, modele, annee, couleur, tarifs, disponible, caracteristiques, equipements } = req.body;
-
-    if (!nom || !annee || !tarifs || !JSON.parse(tarifs).unJour) {
-      return res.status(400).json({ message: "❌ Le nom, l'année et le tarif journalier sont requis." });
-    }
-
-    const anneeNum = Number(annee);
-    const parsedTarifs = JSON.parse(tarifs);
-
-    const imageUrl = req.file ? req.file.path : null;
-
-    const nouvelleMoto = new Moto({
-      nom,
-      marque,
-      modele,
-      annee: anneeNum,
-      couleur,
-      tarifs: {
-        unJour: parsedTarifs.unJour,
-        deuxTroisJours: parsedTarifs.deuxTroisJours,
-        quatreCinqJours: parsedTarifs.quatreCinqJours,
-        uneSemaine: parsedTarifs.uneSemaine
-      },
-      disponible: disponible === "true" || disponible === true,
-      caracteristiques: caracteristiques || {},
-      equipements: equipements || [],
-      image: imageUrl
-    });
-
-    const motoEnregistree = await nouvelleMoto.save();
-    res.status(201).json(motoEnregistree);
-  } catch (error) {
-    console.error("❌ Erreur lors de l'ajout de la moto :", error);
-    res.status(500).json({ message: "Erreur lors de l'ajout de la moto", error });
-  }
-});
-
-// 4️⃣ PATCH /api/motos/:id → Modifier (avec image optionnelle)
-router.patch('/:id', upload.single('image'), async (req, res) => {
-  const id = req.params.id.trim();
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "❌ ID invalide" });
-  }
-
-  try {
-    const data = { ...req.body };
-
-    // 🖼️ Si nouvelle image uploadée, on remplace
-    if (req.file) {
-      data.image = req.file.path;
-    }
-
-    // 📦 On parse les tarifs si c’est une string (FormData oblige)
-    if (data.tarifs && typeof data.tarifs === 'string') {
-      try {
-        data.tarifs = JSON.parse(data.tarifs);
-      } catch (err) {
-        return res.status(400).json({ message: "❌ Tarifs mal formés (JSON invalide)", error: err });
-      }
-    }
-
-    // 🔧 On update la moto
-    const updatedMoto = await Moto.findByIdAndUpdate(id, data, {
-      new: true,
-      runValidators: true
-    });
-
-    if (!updatedMoto) {
-      return res.status(404).json({ message: "❌ Moto non trouvée" });
-    }
-
-    res.status(200).json(updatedMoto);
-  } catch (error) {
-    console.error("❌ Erreur serveur PATCH :", error);
-    res.status(500).json({ message: "Erreur serveur lors de la mise à jour", error });
-  }
-});
-
-
-// 5️⃣ DELETE /api/motos/:id → Supprimer
-router.delete('/:id', async (req, res) => {
-  const id = String(req.params.id).trim();
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "ID invalide" });
-  }
-
-  try {
-    const deletedMoto = await Moto.findByIdAndDelete(id);
-
-    if (!deletedMoto) {
-      return res.status(404).json({ message: "Moto non trouvée" });
-    }
-
-    res.status(200).json({ message: "Moto supprimée avec succès", moto: deletedMoto });
-  } catch (error) {
-    console.error("❌ Erreur lors de la suppression :", error);
-    res.status(500).json({ message: "Erreur serveur", error });
+    return res.status(500).json({ message: "Erreur lors de la récupération de la moto", error });
   }
 });
 
