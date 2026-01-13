@@ -11,6 +11,7 @@ const connectDB = async () => {
         const conn = await mongoose.connect(process.env.MONGO_URI, {
             // Depuis Mongoose v6+, ces options ne sont plus nécessaires :
             // useNewUrlParser, useUnifiedTopology, useCreateIndex, useFindAndModify
+            
         });
 
         // Affiche un message si la connexion réussit

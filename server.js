@@ -20,6 +20,8 @@ const adminMotosRoutes = require("./routes/adminMotosRoutes.js");
 const adminClientRoutes = require("./routes/adminClientRoutes.js");
 const adminReservationRoutes = require("./routes/adminReservationRoutes.js");
 const adminAuthRoutes = require("./routes/adminAuthRoutes.js");
+const uploadRoutes = require("./routes/admin/uploadRoutes");
+
 // const pagesRoutes = require("./routes/pagesRoutes"); // tu peux le remettre si tu l’utilises
 
 // ✅ Vérification des variables d'env
@@ -75,6 +77,8 @@ app.use("/api/admin/motos", adminMotosRoutes);
 app.use("/api/admin/clients", adminClientRoutes);
 app.use("/api/admin/reservations", adminReservationRoutes);
 app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin/upload", uploadRoutes);
+
 
 // 🔌 Gestion propre SIGINT
 process.on("SIGINT", async () => {

@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 dotenv.config();
 
+
+if (process.env.NODE_ENV === 'production') {
+  console.log("❌ Seed bloqué en production");
+  process.exit(1);
+}
+ 
 const connectDB = require('./config/db');
 const Moto = require('./models/moto');
 
@@ -13,7 +19,7 @@ const motos = [
     annee: 2025,
     couleur: "Noir",
     tarifs: { unJour: 180 },
-    image: "/uploads/cruise.webp",
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313677/cruise_j68fhs.webp",
     disponible: true,
     caracteristiques: {
       moteur: "Milwaukee-Eight 117",
@@ -32,7 +38,7 @@ const motos = [
     annee: 2025,
     couleur: "Bleu metallique",
     tarifs: { unJour: 175 },
-    image: "/uploads/brad.webp",
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313677/brad_cqw9mg.webp",
     disponible: true,
     caracteristiques: {
       moteur: "Milwaukee-Eight 114",
@@ -51,7 +57,7 @@ const motos = [
     annee: 2025,
     couleur: "Rouge",
     tarifs: { unJour: 175 },
-    image: "/uploads/neo.webp",
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313778/neo_qysy7w.webp",
     disponible: true,
     caracteristiques: {
       moteur: "Moteur Ducati V2",
@@ -70,7 +76,7 @@ const motos = [
     annee: 2025,
     couleur: "Bleu",
     tarifs: { unJour: 160 },
-    image: "/uploads/jason.webp",
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313810/jason_hnlzbv.webp",
     disponible: true,
     caracteristiques: {
       moteur: "Revolution Max 1250",
@@ -89,7 +95,7 @@ const motos = [
     annee: 2025,
     couleur: "Noir",
     tarifs: { unJour: 140 },
-    image: "/uploads/mcqueen.webp",
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313677/mcqueen_j2dykt.webp",
     disponible: true,
     caracteristiques: {
       moteur: "Twin parallele",
@@ -108,7 +114,7 @@ const motos = [
     annee: 2025,
     couleur: "Noir",
     tarifs: { unJour: 140 },
-    image: "/uploads/king.avif",
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313677/king_d0hgwp.avif",
     disponible: true,
     caracteristiques: {
       moteur: "Twin parallele",
