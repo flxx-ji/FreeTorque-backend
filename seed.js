@@ -18,7 +18,7 @@ const motos = [
     modele: "Street Glide",
     annee: 2025,
     couleur: "Noir",
-    tarifs: { unJour: 180 },
+    tarifs: { unJour: 210 },
     image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313677/cruise_j68fhs.webp",
     disponible: true,
     caracteristiques: {
@@ -37,7 +37,7 @@ const motos = [
     modele: "Road Glide",
     annee: 2025,
     couleur: "Bleu metallique",
-    tarifs: { unJour: 175 },
+    tarifs: { unJour: 210 },
     image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768313677/brad_cqw9mg.webp",
     disponible: true,
     caracteristiques: {
@@ -125,7 +125,46 @@ const motos = [
       reservoir: "14.5"
     },
     equipements: ["Casque", "Gants", "GPS", "GoPro", "Combi Pluie", "Carte sd"]
+  },
+  {
+    nom: "Chief",
+    marque: "Indian",
+    modele: "Chief Bobber Dark Horse",
+    annee: 2026,
+    couleur: "Noir",
+    tarifs: { unJour: 180 },
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768404812/chierBobberDH_zdx61a.webp",
+    disponible: true,
+    caracteristiques: {
+      moteur: "Twin parallele 116",
+      cylindree: "1890cc",
+      transmission: "6 vitesses",
+      poids: "304",
+      autonomie: "250",
+      reservoir: "15.1"
+    },
+    equipements: ["Casque", "Gants", "GPS", "GoPro", "Combi Pluie", "Carte sd"]
+  },
+  {
+    nom: "Ghost",
+    marque: "Indian",
+    modele: "Chieftain Powerplus Dark Horse",
+    annee: 2026,
+    couleur: "Noir",
+    tarifs: { unJour: 210 },
+    image: "https://res.cloudinary.com/dlafo7ne1/image/upload/v1768404811/chieftainPowerplusDH_naqjnb.webp",
+    disponible: true,
+    caracteristiques: {
+      moteur: "PowerPlus 112Ci refroidi par liquide",
+      cylindree: "1834cc",
+      transmission: "6 vitesses",
+      poids: "366",
+      autonomie: "380",
+      reservoir: "22.7"
+    },
+    equipements: ["Casque", "Gants", "GPS", "GoPro", "Combi Pluie", "Carte sd"]
   }
+
 ];
 
 async function seed() {
