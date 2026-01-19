@@ -10,32 +10,41 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ message: "⛔ Aucun token fourni ou format invalide." });
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.split(' ')[1];
   console.log("🟠 Token extrait :", token);
 
   // 🛑 Vérifie que la clé secrète est bien définie
   if (!process.env.JWT_SECRET) {
-    console.error("❌ Clé JWT_SECRET non définie dans l'environnement !");
-    return res.status(500).json({ message: "Erreur de configuration serveur (JWT_SECRET manquant)." });
+    console.error("❌ JWT_SECRET manquant !");
+    return res.status(500).json({ message: "Erreur serveur : JWT_SECRET manquant." });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ Token décodé avec succès :", decoded);
+    console.log("✅ Token décodé :", decoded);
 
-    req.adminId = decoded.id; // Injecte l'id dans la requête pour un usage ultérieur
-    next(); // Passe au middleware ou contrôleur suivant
+    // 🔐 SÉCURITÉ ADMIN
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ message: "⛔ Accès interdit (admin requis)." });
+    }
+
+    // Injection des infos utiles
+    req.adminId = decoded.id;
+    req.admin = decoded;
+
+    next();
   } catch (error) {
-    console.error("❌ Erreur de vérification JWT :", error);
+    console.error("❌ Erreur JWT :", error.name);
 
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: "⏰ Token expiré. Veuillez vous reconnecter." });
     }
+
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: "❌ Token invalide." });
     }
 
-    return res.status(500).json({ message: "Erreur interne lors de la vérification du token." });
+    return res.status(500).json({ message: "Erreur interne d'authentification." });
   }
 };
 
