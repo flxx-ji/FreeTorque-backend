@@ -13,7 +13,7 @@ const connectDB = require("./config/db.js");
 const checkEnvVariables = require("./utils/checkEnv.js");
 
 // 🛣️ Import des routes
-const motoRoutes = require("./routes/motoRoutes");
+const {router: motoRoutes} = require("./routes/motoRoutes");
 const reservationRoutes = require("./routes/reservationRoutes.js");
 const clientRoutes = require("./routes/clientRoutes.js");
 const adminMotosRoutes = require("./routes/adminMotosRoutes.js");
