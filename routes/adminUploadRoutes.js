@@ -3,7 +3,7 @@ const router = express.Router();
 const cloudinary = require('../config/cloudinary');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
-const fs = require('fs'); // ✅ AJOUT ICI
+const fs = require('fs');  
 
 const upload = multer({ dest: 'tmp/' });
 

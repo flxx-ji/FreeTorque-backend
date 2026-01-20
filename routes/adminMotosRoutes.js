@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Moto = require('../models/moto');
 const authMiddleware = require('../middleware/authMiddleware');
-const { invalidateCache } = require('./motoRoutes');
+ 
 
 
 // 🔒 Protège TOUTES les routes admin motos
@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
   try {
     const moto = new Moto(req.body);
     const saved = await moto.save(); // ✅ déclenche ton pre('save') -> calcule tarifs auto
-    invalidateCache(); 
+     
     return res.status(201).json(saved);
   } catch (err) {
     console.error("❌ Erreur création moto :", err);
@@ -55,7 +55,7 @@ router.put('/:id', async (req, res) => {
     Object.assign(moto, req.body);
 
     const saved = await moto.save(); // ✅ déclenche pre('save') -> recalcul tarifs
-    invalidateCache();
+    
     return res.json(saved);
   } catch (err) {
     return res.status(400).json({ message: "Erreur update moto", error: err.message });
@@ -66,7 +66,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const deleted = await Moto.findByIdAndDelete(req.params.id);
-    invalidateCache();
+    
     if (!deleted) return res.status(404).json({ message: "Moto introuvable" });
     return res.json({ message: "Moto supprimée" });
   } catch (err) {
