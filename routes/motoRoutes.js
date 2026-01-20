@@ -18,13 +18,13 @@ function invalidateCache() {
 // 1️⃣ GET /api/motos → Liste (PUBLIC) + cache + headers
 router.get('/', async (req, res) => {
   try {
-    // 🔥 cache mémoire
-    if (cache.data && Date.now() < cache.expires) {
-      res.set('X-Cache', 'HIT');
-      // cache navigateur/CDN
-      res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-      return res.status(200).json(cache.data);
-    }
+    const motos = await Moto.find().lean();
+    return res.status(200).json(motos);
+  } catch (error) {
+    return res.status(500).json({ message: "Erreur récupération motos" });
+  }
+});
+
 
     const motos = await Moto.find().lean(); // lean = plus rapide
     cache.data = motos;
