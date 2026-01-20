@@ -39,7 +39,7 @@ const motoSchema = new mongoose.Schema({
   image: {
     type: String,
     required: false,
-    default: '/uploads/default_image.webp'
+    default: null
   },
   caracteristiques: {
     moteur: { type: String, default: "Non spécifié" },

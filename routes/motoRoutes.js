@@ -1,44 +1,20 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
-const Moto = require('../models/moto.js');
+const Moto = require('../models/moto');
 
-// ✅ mini cache mémoire (1 min)
-const CACHE_TTL_MS = 60_000;
-let cache = {
-  expires: 0,
-  data: null
-};
-
-function invalidateCache() {
-  cache.expires = 0;
-  cache.data = null;
-}
-
-// 1️⃣ GET /api/motos → Liste (PUBLIC) + cache + headers
+// 1️⃣ GET /api/motos → Liste publique (SANS cache)
 router.get('/', async (req, res) => {
   try {
     const motos = await Moto.find().lean();
     return res.status(200).json(motos);
   } catch (error) {
+    console.error("❌ Erreur récupération motos :", error);
     return res.status(500).json({ message: "Erreur récupération motos" });
   }
 });
 
-
-    const motos = await Moto.find().lean(); // lean = plus rapide
-    cache.data = motos;
-    cache.expires = Date.now() + CACHE_TTL_MS;
-
-    res.set('X-Cache', 'MISS');
-    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-    return res.status(200).json(motos);
-  } catch (error) {
-    return res.status(500).json({ message: "Erreur lors de la récupération des motos", error });
-  }
-});
-
-// 2️⃣ GET /api/motos/:id → Détail (PUBLIC)
+// 2️⃣ GET /api/motos/:id → Détail public
 router.get('/:id', async (req, res) => {
   const id = String(req.params.id).trim();
 
@@ -48,11 +24,14 @@ router.get('/:id', async (req, res) => {
 
   try {
     const moto = await Moto.findById(id).lean();
-    if (!moto) return res.status(404).json({ message: "Moto non trouvée" });
+    if (!moto) {
+      return res.status(404).json({ message: "Moto non trouvée" });
+    }
     return res.status(200).json(moto);
   } catch (error) {
-    return res.status(500).json({ message: "Erreur lors de la récupération de la moto", error });
+    console.error("❌ Erreur récupération moto :", error);
+    return res.status(500).json({ message: "Erreur récupération moto" });
   }
 });
 
-module.exports = { router, invalidateCache};
+module.exports = router;
