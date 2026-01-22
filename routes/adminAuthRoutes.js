@@ -10,35 +10,41 @@ const authMiddleware = require('../middleware/authMiddleware');
  * POST /api/admin/register
  * =========================
  * Création d'un admin
- * ⚠️ À désactiver en prod réelle
+ * ⚠️ DEV / SETUP UNIQUEMENT
  */
 router.post('/register', async (req, res) => {
   const { nom, email, password } = req.body;
 
-  if (!nom || !email || !password) {
-    return res.status(400).json({ message: 'Tous les champs sont requis.' });
+  if (!email || !password) {
+    return res.status(400).json({
+      message: 'Email et mot de passe requis.'
+    });
   }
 
   try {
     const adminExiste = await Admin.findOne({ email });
     if (adminExiste) {
-      return res.status(409).json({ message: 'Un admin existe déjà avec cet email.' });
+      return res.status(409).json({
+        message: 'Un admin existe déjà avec cet email.'
+      });
     }
 
-    const nouvelAdmin = new Admin({ nom, email, password });
+    const nouvelAdmin = new Admin({
+      nom: nom || 'Admin',
+      email,
+      password
+    });
+
     await nouvelAdmin.save();
 
-    res.status(201).json({
-      message: 'Admin enregistré avec succès',
-      admin: {
-        id: nouvelAdmin._id,
-        nom: nouvelAdmin.nom,
-        email: nouvelAdmin.email
-      }
+    return res.status(201).json({
+      message: 'Admin enregistré avec succès'
     });
   } catch (error) {
     console.error('❌ Erreur register admin :', error);
-    res.status(500).json({ message: "Erreur lors de l'inscription" });
+    return res.status(500).json({
+      message: "Erreur lors de l'inscription"
+    });
   }
 });
 
@@ -46,27 +52,33 @@ router.post('/register', async (req, res) => {
  * ======================
  * POST /api/admin/login
  * ======================
- * Connexion admin + génération JWT
+ * Connexion admin + JWT + cookie httpOnly
  */
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: 'Email et mot de passe requis.' });
+    return res.status(400).json({
+      message: 'Email et mot de passe requis.'
+    });
   }
 
   try {
     const admin = await Admin.findOne({ email });
     if (!admin) {
-      return res.status(404).json({ message: 'Admin non trouvé.' });
+      return res.status(404).json({
+        message: 'Admin non trouvé.'
+      });
     }
 
     const passwordMatch = await admin.comparePassword(password);
     if (!passwordMatch) {
-      return res.status(401).json({ message: 'Mot de passe incorrect.' });
+      return res.status(401).json({
+        message: 'Mot de passe incorrect.'
+      });
     }
 
-    // 🔐 Génération du JWT ADMIN
+    // 🔐 JWT ADMIN
     const token = jwt.sign(
       {
         id: admin._id,
@@ -78,9 +90,18 @@ router.post('/login', async (req, res) => {
       { expiresIn: '2h' }
     );
 
-    res.status(200).json({
+    // 🍪 COOKIE HTTP-ONLY (clé côté serveur)
+    res.cookie('adminToken', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false, // true en prod HTTPS
+      path: '/',
+      maxAge: 2 * 60 * 60 * 1000 // 2h
+    });
+
+    return res.status(200).json({
       message: 'Connexion réussie',
-      token,
+      token, // utile côté front (UX)
       admin: {
         nom: admin.nom,
         email: admin.email
@@ -88,30 +109,50 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erreur login admin :', error);
-    res.status(500).json({ message: 'Erreur lors de la connexion' });
+    return res.status(500).json({
+      message: 'Erreur lors de la connexion'
+    });
   }
+});
+
+/**
+ * ======================
+ * POST /api/admin/logout
+ * ======================
+ * Déconnexion admin
+ */
+router.post('/logout', (req, res) => {
+  res.clearCookie('adminToken', { path: '/' });
+
+  return res.status(200).json({
+    message: 'Déconnexion réussie'
+  });
 });
 
 /**
  * ===========================
  * GET /api/admin/protected
  * ===========================
- * Route test pour vérifier le token
+ * Route test token
  */
 router.get('/protected', authMiddleware, async (req, res) => {
   try {
     const admin = await Admin.findById(req.adminId).select('nom email');
     if (!admin) {
-      return res.status(404).json({ message: 'Admin introuvable' });
+      return res.status(404).json({
+        message: 'Admin introuvable'
+      });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Accès autorisé',
       admin
     });
   } catch (error) {
     console.error('❌ Erreur /protected :', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    return res.status(500).json({
+      message: 'Erreur serveur'
+    });
   }
 });
 
