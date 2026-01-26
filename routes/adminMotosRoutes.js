@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Moto = require('../models/moto');
 const authMiddleware = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload'); // multer memory
+const cloudinary = require('../config/cloudinary');
+
  
 
 
@@ -9,12 +12,31 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 
 // ✅ CREATE moto (image = secure_url Cloudinary)
-router.post('/', async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const moto = new Moto(req.body);
-    const saved = await moto.save(); // ✅ déclenche ton pre('save') -> calcule tarifs auto
-     
+    let imageUrl = null;
+
+    // 🖼️ upload Cloudinary si image envoyée
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+        {
+          folder: 'free-torque/motos'
+        }
+      );
+      imageUrl = result.secure_url;
+    }
+
+    const moto = new Moto({
+      ...req.body,
+      image: imageUrl,
+      tarifs: JSON.parse(req.body.tarifs),
+      caracteristiques: JSON.parse(req.body.caracteristiques)
+    });
+
+    const saved = await moto.save(); // 🔥 hook tarifs OK
     return res.status(201).json(saved);
+
   } catch (err) {
     console.error("❌ Erreur création moto :", err);
     return res.status(400).json({
@@ -23,6 +45,7 @@ router.post('/', async (req, res) => {
     });
   }
 });
+
 
 // ✅ LIST
 router.get('/', async (req, res) => {
@@ -47,20 +70,38 @@ router.get('/:id', async (req, res) => {
 
 // ✅ UPDATE (PUT) -> si unJour change, ton hook ne se déclenche PAS sur findByIdAndUpdate
 // Donc on fait: findById -> assign -> save()
-router.put('/:id', async (req, res) => {
+router.put('/:id', upload.single('image'), async (req, res) => {
   try {
     const moto = await Moto.findById(req.params.id);
     if (!moto) return res.status(404).json({ message: "Moto introuvable" });
 
-    Object.assign(moto, req.body);
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+        { folder: 'free-torque/motos' }
+      );
+      moto.image = result.secure_url;
+    }
 
-    const saved = await moto.save(); // ✅ déclenche pre('save') -> recalcul tarifs
-    
+    Object.assign(moto, {
+      ...req.body,
+      tarifs: req.body.tarifs ? JSON.parse(req.body.tarifs) : moto.tarifs,
+      caracteristiques: req.body.caracteristiques
+        ? JSON.parse(req.body.caracteristiques)
+        : moto.caracteristiques
+    });
+
+    const saved = await moto.save();
     return res.json(saved);
+
   } catch (err) {
-    return res.status(400).json({ message: "Erreur update moto", error: err.message });
+    return res.status(400).json({
+      message: "Erreur update moto",
+      error: err.message
+    });
   }
 });
+
 
 // ✅ DELETE
 router.delete('/:id', async (req, res) => {
