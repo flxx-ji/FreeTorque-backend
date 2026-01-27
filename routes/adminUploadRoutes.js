@@ -3,7 +3,7 @@ const router = express.Router();
 const cloudinary = require('../config/cloudinary');
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
-const fs = require('fs');  
+const fs = require('fs');
 
 const upload = multer({ dest: 'tmp/' });
 
@@ -15,19 +15,30 @@ router.post(
   async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "❌ Aucune image reçue" });
+        return res.status(400).json({ message: 'Aucune image reçue' });
       }
 
+      // 🗑️ Supprimer l’ancienne image si fournie
+      const oldPublicId = req.body.oldPublicId;
+      if (oldPublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldPublicId);
+        } catch (e) {
+          console.warn('⚠️ Suppression ancienne image échouée:', e.message);
+        }
+      }
+
+      // ☁️ Upload nouvelle image
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'motos',
         transformation: [{ quality: 'auto', fetch_format: 'auto' }]
       });
 
-      // ✅ SUPPRIME LE FICHIER TEMPORAIRE APRÈS UPLOAD
+      // 🧹 Nettoyage du fichier temporaire
       try {
         fs.unlinkSync(req.file.path);
       } catch (e) {
-        console.warn("⚠️ Impossible de supprimer le fichier tmp :", e.message);
+        console.warn('⚠️ Impossible de supprimer le fichier tmp:', e.message);
       }
 
       return res.status(200).json({
@@ -36,18 +47,16 @@ router.post(
       });
 
     } catch (err) {
-      console.error("❌ Upload Cloudinary :", err);
+      console.error('❌ Upload Cloudinary:', err);
 
-      // ✅ Même en erreur, on essaie de nettoyer le tmp
+      // sécurité : cleanup même en erreur
       if (req.file?.path) {
         try {
           fs.unlinkSync(req.file.path);
-        } catch (e) {
-          console.warn("⚠️ Cleanup tmp échoué :", e.message);
-        }
+        } catch (_) {}
       }
 
-      return res.status(500).json({ message: "Erreur upload image" });
+      return res.status(500).json({ message: 'Erreur upload image' });
     }
   }
 );

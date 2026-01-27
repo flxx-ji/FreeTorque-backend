@@ -105,28 +105,32 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 
 // ✅ DELETE
 // ❌ DELETE moto + image Cloudinary
-router.delete('/:id', async (req, res) => {
+rrouter.delete('/:id', async (req, res) => {
   try {
     const moto = await Moto.findById(req.params.id);
+
     if (!moto) {
       return res.status(404).json({ message: 'Moto introuvable' });
     }
 
-    // 🧹 Supprimer l’image Cloudinary si elle existe
-    if (moto.image) {
+    // 🗑️ Suppression image Cloudinary si existante
+    if (moto.image?.public_id) {
       try {
-        // on supprime par public_id = dossier + id (comme à l’upload)
-        await cloudinary.uploader.destroy(`free-torque/motos/${moto._id}`);
+        await cloudinary.uploader.destroy(moto.image.public_id);
       } catch (e) {
-        console.warn('⚠️ Image Cloudinary non supprimée', e.message);
+        console.warn(
+          '⚠️ Impossible de supprimer l’image Cloudinary :',
+          e.message
+        );
       }
     }
 
     await moto.deleteOne();
 
-    return res.json({ message: 'Moto supprimée' });
+    return res.json({ message: 'Moto supprimée (image incluse)' });
+
   } catch (err) {
-    console.error('❌ Erreur suppression moto', err);
+    console.error('❌ Erreur suppression moto :', err);
     return res.status(500).json({ message: 'Erreur serveur' });
   }
 });

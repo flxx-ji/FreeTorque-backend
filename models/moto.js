@@ -37,10 +37,10 @@ const motoSchema = new mongoose.Schema({
     default: true
   },
   image: {
-    type: String,
-    required: false,
-    default: null
-  },
+  url: string,
+  public_id: string
+}
+,
   caracteristiques: {
     moteur: { type: String, default: "Non spécifié" },
     cylindree: { type: String, default: "Non spécifié" },
