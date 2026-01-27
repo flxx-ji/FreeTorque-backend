@@ -105,7 +105,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
 
 // ✅ DELETE
 // ❌ DELETE moto + image Cloudinary
-rrouter.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const moto = await Moto.findById(req.params.id);
 

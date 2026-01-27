@@ -37,9 +37,16 @@ const motoSchema = new mongoose.Schema({
     default: true
   },
   image: {
-  url: string,
-  public_id: string
+  url: {
+    type: String,
+    default: null
+  },
+  public_id: {
+    type: String,
+    default: null
+  }
 }
+
 ,
   caracteristiques: {
     moteur: { type: String, default: "Non spécifié" },
