@@ -21,6 +21,9 @@ const adminClientRoutes = require("./routes/adminClientRoutes.js");
 const adminReservationRoutes = require("./routes/adminReservationRoutes.js");
 const adminAuthRoutes = require("./routes/adminAuthRoutes.js");
 const adminUploadRoutes = require("./routes/adminUploadRoutes");
+const cookieParser = require('cookie-parser');
+
+
 
 // const pagesRoutes = require("./routes/pagesRoutes"); // tu peux le remettre si tu l’utilises
 
@@ -57,6 +60,24 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // 🧠 JSON Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+
+// 🔒 Sécurité : limiter les méthodes HTTP autorisées
+app.use((req, res, next) => {
+  const allowed = ['GET', 'POST', 'PUT', 'DELETE'];
+
+  if (!allowed.includes(req.method)) {
+    return res.status(405).json({
+      message: '⛔ Méthode non autorisée'
+    });
+  }
+
+  next();
+});
+
+
+
 
 // ✅ Route de ping pour UptimeRobot
 app.get("/api/ping", (req, res) => {

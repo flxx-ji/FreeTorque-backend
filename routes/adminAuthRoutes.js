@@ -1,9 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-
 const Admin = require('../models/admin');
 const authMiddleware = require('../middleware/authMiddleware');
+const rateLimit = require('express-rate-limit');
+
+
+
+
+// 🛡️ Protection brute-force login admin
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5, // 5 tentatives
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: '⛔ Trop de tentatives. Réessaie dans quelques minutes.'
+  }
+});
 
 /**
  * =========================
@@ -12,7 +26,7 @@ const authMiddleware = require('../middleware/authMiddleware');
  * Création d'un admin
  * ⚠️ DEV / SETUP UNIQUEMENT
  */
-router.post('/register', async (req, res) => {
+router.post('/register', loginLimiter, async (req, res) => {
   const { nom, email, password } = req.body;
 
   if (!email || !password) {
@@ -93,8 +107,8 @@ router.post('/login', async (req, res) => {
     // 🍪 COOKIE HTTP-ONLY (clé côté serveur)
     res.cookie('adminToken', token, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false, // true en prod HTTPS
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: 2 * 60 * 60 * 1000 // 2h
     });

@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
-// 🛠️ Schéma de la moto
 const motoSchema = new mongoose.Schema({
   nom: {
     type: String,
-    required: [true, "Le nom de la moto est requis"]
+    required: true,
+    trim: true
   },
   marque: {
     type: String,
@@ -26,28 +26,24 @@ const motoSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
   tarifs: {
     unJour: { type: Number, required: true },
     deuxTroisJours: { type: Number },
     quatreCinqJours: { type: Number },
     uneSemaine: { type: Number }
   },
+
   disponible: {
     type: Boolean,
     default: true
   },
-  image: {
-  url: {
-    type: String,
-    default: null
-  },
-  public_id: {
-    type: String,
-    default: null
-  }
-}
 
-,
+  image: {
+    url: { type: String, default: null },
+    public_id: { type: String, default: null }
+  },
+
   caracteristiques: {
     moteur: { type: String, default: "Non spécifié" },
     cylindree: { type: String, default: "Non spécifié" },
@@ -56,25 +52,31 @@ const motoSchema = new mongoose.Schema({
     autonomie: { type: String, default: "Non spécifié" },
     reservoir: { type: String, default: "Non spécifié" }
   },
+
   equipements: {
     type: [String],
     default: ["Casque", "Gants", "GPS", "Gopro", "Carte Sd", "Combi de pluie"]
   }
-}, { timestamps: true });
+
+}, { timestamps: true, strict: true });
 
 
-// 🎯 Hook : Avant sauvegarde, calcule automatiquement les tarifs étendus
+// 🔐 Calcul automatique des tarifs
 motoSchema.pre('save', function (next) {
-  if (this.tarifs && this.tarifs.unJour) {
+  if (this.isModified('tarifs.unJour')) {
     const unJour = this.tarifs.unJour;
 
-    // 💡 Logique de calcul
-    this.tarifs.deuxTroisJours = Math.round((unJour * 2 + (unJour * 0.8)) * 100) / 100; // -20% sur le 3e jour
-    this.tarifs.quatreCinqJours = Math.round((unJour * 4 + (unJour * 0.8)) * 100) / 100; // -20% sur le 5e jour
-    this.tarifs.uneSemaine = Math.round(unJour * 6); // 7e jour offert
+    this.tarifs.deuxTroisJours =
+      Math.round((unJour * 2 + unJour * 0.8) * 100) / 100;
+
+    this.tarifs.quatreCinqJours =
+      Math.round((unJour * 4 + unJour * 0.8) * 100) / 100;
+
+    this.tarifs.uneSemaine =
+      Math.round(unJour * 6);
   }
+
   next();
 });
 
-// ✅ Exporte le modèle (vérifie s’il existe déjà)
 module.exports = mongoose.models.Moto || mongoose.model('Moto', motoSchema);

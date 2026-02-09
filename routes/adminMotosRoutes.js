@@ -2,137 +2,77 @@ const express = require('express');
 const router = express.Router();
 const Moto = require('../models/moto');
 const authMiddleware = require('../middleware/authMiddleware');
-const upload = require('../middleware/upload'); // multer memory
+const upload = require('../middleware/upload');
 const cloudinary = require('../config/cloudinary');
 
- 
-
-
-// 🔒 Protège TOUTES les routes admin motos
 router.use(authMiddleware);
 
-// ✅ CREATE moto (image = secure_url Cloudinary)
-router.post('/', upload.single('image'), async (req, res) => {
+// ➕ CREATE
+router.post('/', async (req, res) => {
   try {
-    let imageUrl = null;
-
-    // 🖼️ upload Cloudinary si image envoyée
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(
-        `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
-        {
-          folder: 'free-torque/motos'
-        }
-      );
-      imageUrl = result.secure_url;
-    }
-
-    const moto = new Moto({
-      ...req.body,
-      image: imageUrl,
-      tarifs: JSON.parse(req.body.tarifs),
-      caracteristiques: JSON.parse(req.body.caracteristiques)
-    });
-
-    const saved = await moto.save(); // 🔥 hook tarifs OK
-    return res.status(201).json(saved);
-
+    const moto = new Moto(req.body);
+    const saved = await moto.save();
+    res.status(201).json(saved);
   } catch (err) {
-    console.error("❌ Erreur création moto :", err);
-    return res.status(400).json({
-      message: "Erreur création moto",
-      error: err.message
-    });
+    res.status(400).json({ message: "Erreur création moto" });
   }
 });
 
-
-// ✅ LIST
+// 📋 LIST
 router.get('/', async (req, res) => {
-  try {
-    const motos = await Moto.find().sort({ createdAt: -1 });
-    return res.json(motos);
-  } catch (err) {
-    return res.status(500).json({ message: 'Erreur serveur' });
-  }
+  const motos = await Moto.find().sort({ createdAt: -1 });
+  res.json(motos);
 });
 
-// ✅ GET by id
-router.get('/:id', async (req, res) => {
-  try {
-    const moto = await Moto.findById(req.params.id);
-    if (!moto) return res.status(404).json({ message: "Moto introuvable" });
-    return res.json(moto);
-  } catch (err) {
-    return res.status(500).json({ message: 'Erreur serveur' });
-  }
-});
-
-// ✅ UPDATE (PUT) -> si unJour change, ton hook ne se déclenche PAS sur findByIdAndUpdate
-// Donc on fait: findById -> assign -> save()
+// ✏️ UPDATE
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
     const moto = await Moto.findById(req.params.id);
-    if (!moto) return res.status(404).json({ message: "Moto introuvable" });
+    if (!moto) {
+      return res.status(404).json({ message: "Moto introuvable" });
+    }
 
     if (req.file) {
       const result = await cloudinary.uploader.upload(
         `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
         { folder: 'free-torque/motos' }
       );
-      moto.image = result.secure_url;
+
+      moto.image = {
+        url: result.secure_url,
+        public_id: result.public_id
+      };
     }
 
-    Object.assign(moto, {
-      ...req.body,
-      tarifs: req.body.tarifs ? JSON.parse(req.body.tarifs) : moto.tarifs,
-      caracteristiques: req.body.caracteristiques
-        ? JSON.parse(req.body.caracteristiques)
-        : moto.caracteristiques
-    });
-
+    Object.assign(moto, req.body);
     const saved = await moto.save();
-    return res.json(saved);
 
+    res.json(saved);
   } catch (err) {
-    return res.status(400).json({
-      message: "Erreur update moto",
-      error: err.message
-    });
+    res.status(400).json({ message: "Erreur update moto" });
   }
 });
 
-
-// ✅ DELETE
-// ❌ DELETE moto + image Cloudinary
+// 🗑️ DELETE (verrouillé)
 router.delete('/:id', async (req, res) => {
-  try {
-    const moto = await Moto.findById(req.params.id);
+  const moto = await Moto.findById(req.params.id);
 
-    if (!moto) {
-      return res.status(404).json({ message: 'Moto introuvable' });
-    }
-
-    // 🗑️ Suppression image Cloudinary si existante
-    if (moto.image?.public_id) {
-      try {
-        await cloudinary.uploader.destroy(moto.image.public_id);
-      } catch (e) {
-        console.warn(
-          '⚠️ Impossible de supprimer l’image Cloudinary :',
-          e.message
-        );
-      }
-    }
-
-    await moto.deleteOne();
-
-    return res.json({ message: 'Moto supprimée (image incluse)' });
-
-  } catch (err) {
-    console.error('❌ Erreur suppression moto :', err);
-    return res.status(500).json({ message: 'Erreur serveur' });
+  if (!moto) {
+    return res.status(404).json({ message: "Moto introuvable" });
   }
+
+  if (!moto.disponible) {
+    return res.status(403).json({
+      message: "⛔ Impossible de supprimer une moto indisponible"
+    });
+  }
+
+  if (moto.image?.public_id) {
+    await cloudinary.uploader.destroy(moto.image.public_id);
+  }
+
+  await moto.deleteOne();
+  res.json({ message: "Moto supprimée" });
 });
 
 module.exports = router;
