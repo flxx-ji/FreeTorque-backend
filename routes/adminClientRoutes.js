@@ -1,87 +1,135 @@
 const express = require('express');
 const router = express.Router();
 const Client = require('../models/client');
-const authMiddleware = require('../middleware/authMiddleware'); // 🔒 Ajout du middleware de sécurité
+const authMiddleware = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 
-// 📌 Toutes les routes ci-dessous sont protégées
 router.use(authMiddleware);
 
-// 📌 Récupérer tous les clients (GET)
+/**
+ * ===========================
+ * GET - Tous les clients
+ * ===========================
+ */
 router.get('/', async (req, res) => {
-    try {
-        const clients = await Client.find();
-        res.status(200).json(clients);
-    } catch (error) {
-        res.status(500).json({ message: "Erreur lors de la récupération des clients", error });
-    }
+  try {
+    const clients = await Client.find().sort({ createdAt: -1 });
+    res.status(200).json(clients);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération clients" });
+  }
 });
 
-// 📌 Récupérer un client par ID (GET)
+/**
+ * ===========================
+ * GET - Client par ID
+ * ===========================
+ */
 router.get('/:id', async (req, res) => {
-    try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ message: "ID invalide" });
-        }
-        const client = await Client.findById(req.params.id);
-        if (!client) return res.status(404).json({ message: "Client non trouvé" });
-
-        res.status(200).json(client);
-    } catch (error) {
-        res.status(500).json({ message: "Erreur lors de la récupération du client", error });
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "ID invalide" });
     }
+
+    const client = await Client.findById(req.params.id);
+    if (!client) {
+      return res.status(404).json({ message: "Client non trouvé" });
+    }
+
+    res.status(200).json(client);
+
+  } catch {
+    res.status(500).json({ message: "Erreur récupération client" });
+  }
 });
 
-// 📌 Ajouter un nouveau client (POST)
+/**
+ * ===========================
+ * POST - Création client
+ * ===========================
+ */
 router.post('/', async (req, res) => {
-    try {
-        const { nom, prenom, email, telephone, permis } = req.body;
-        if (!nom || !prenom || !email || !telephone || !permis) {
-            return res.status(400).json({ message: "Tous les champs sont requis." });
-        }
+  try {
+    const { nom, prenom, email, telephone, permis } = req.body;
 
-        const nouveauClient = new Client({ nom, prenom, email, telephone, permis });
-        const clientEnregistre = await nouveauClient.save();
-        res.status(201).json(clientEnregistre);
-    } catch (error) {
-        res.status(500).json({ message: "Erreur lors de l'ajout du client", error });
+    if (!nom || !prenom || !email || !permis) {
+      return res.status(400).json({ message: "Champs obligatoires manquants" });
     }
+
+    const clientExiste = await Client.findOne({ email });
+    if (clientExiste) {
+      return res.status(409).json({ message: "Email déjà utilisé" });
+    }
+
+    const nouveauClient = new Client({
+      nom,
+      prenom,
+      email,
+      telephone,
+      permis
+    });
+
+    const saved = await nouveauClient.save();
+    res.status(201).json(saved);
+
+  } catch (error) {
+    res.status(500).json({ message: "Erreur création client" });
+  }
 });
 
-// 📌 Modifier un client (PUT)
+/**
+ * ===========================
+ * PUT - Modifier client
+ * ===========================
+ */
 router.put('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "ID invalide" });
-        }
+  try {
+    const { id } = req.params;
 
-        const { nom, prenom, email, telephone, permis } = req.body;
-        const client = await Client.findByIdAndUpdate(id, { nom, prenom, email, telephone, permis }, { new: true });
-
-        if (!client) return res.status(404).json({ message: "Client non trouvé" });
-
-        res.status(200).json({ message: "Client mis à jour avec succès", client });
-    } catch (error) {
-        res.status(500).json({ message: "Erreur lors de la mise à jour du client", error });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID invalide" });
     }
+
+    const updated = await Client.findByIdAndUpdate(
+      id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Client non trouvé" });
+    }
+
+    res.status(200).json(updated);
+
+  } catch (error) {
+    res.status(500).json({ message: "Erreur mise à jour client" });
+  }
 });
 
-// 📌 Supprimer un client (DELETE)
+/**
+ * ===========================
+ * DELETE - Supprimer client
+ * ===========================
+ */
 router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "ID invalide" });
-        }
+  try {
+    const { id } = req.params;
 
-        const client = await Client.findByIdAndDelete(id);
-        if (!client) return res.status(404).json({ message: "Client non trouvé" });
-
-        res.status(200).json({ message: "Client supprimé avec succès" });
-    } catch (error) {
-        res.status(500).json({ message: "Erreur lors de la suppression du client", error });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID invalide" });
     }
+
+    const deleted = await Client.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Client non trouvé" });
+    }
+
+    res.status(200).json({ message: "Client supprimé" });
+
+  } catch {
+    res.status(500).json({ message: "Erreur suppression client" });
+  }
 });
 
 module.exports = router;
